@@ -1,3 +1,0 @@
-# rbg-api config/crd/bases
-# CRD YAML manifests are generated here by running:
-#   make generate-manifests

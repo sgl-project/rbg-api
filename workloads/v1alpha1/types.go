@@ -480,9 +480,7 @@ type RoleBasedGroupList struct {
 	Items           []RoleBasedGroup `json:"items"`
 }
 
-func init() {
-	SchemeBuilder.Register(&RoleBasedGroup{}, &RoleBasedGroupList{})
-}
+
 
 // RoleBasedGroupSetSpec defines the desired state of RoleBasedGroupSet.
 type RoleBasedGroupSetSpec struct {
@@ -548,9 +546,7 @@ type RoleBasedGroupSetList struct {
 	Items           []RoleBasedGroupSet `json:"items"`
 }
 
-func init() { //nolint:gochecknoinits
-	SchemeBuilder.Register(&RoleBasedGroupSet{}, &RoleBasedGroupSetList{})
-}
+
 
 // AdapterScaleTargetRef holds the name and role for scaling target reference.
 type AdapterScaleTargetRef struct {
@@ -609,6 +605,4 @@ type RoleBasedGroupScalingAdapterList struct {
 	Items           []RoleBasedGroupScalingAdapter `json:"items"`
 }
 
-func init() { //nolint:gochecknoinits
-	SchemeBuilder.Register(&RoleBasedGroupScalingAdapter{}, &RoleBasedGroupScalingAdapterList{})
-}
+
