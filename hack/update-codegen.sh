@@ -27,10 +27,13 @@ CLIENT_PKG="${MODULE}/client-go"
 GROUPS="workloads:v1alpha1,v1alpha2"
 OUTPUT_BASE="$(dirname "${BASH_SOURCE[0]}")/../.."
 
+# Get GOPATH safely
+GOPATH=${GOPATH:-$(go env GOPATH)}
+
 # Run deepcopy-gen for API types
 echo "Running deepcopy-gen..."
 "${GOPATH}/bin/controller-gen" object:headerFile="${SCRIPT_ROOT}/hack/boilerplate.go.txt" \
-  paths="${APIS_PKG}/..." \
+  paths="./apis/..." \
   output:object:dir="${SCRIPT_ROOT}/apis"
 
 # Run client-gen, informer-gen, lister-gen

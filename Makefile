@@ -10,8 +10,8 @@ GOOS ?= $(shell go env GOOS)
 GOARCH ?= $(shell go env GOARCH)
 
 # Tools
-CONTROLLER_GEN ?= $(shell which controller-gen 2>/dev/null || echo "$(GOPATH)/bin/controller-gen")
-GOLANGCI_LINT  ?= $(shell which golangci-lint 2>/dev/null || echo "$(GOPATH)/bin/golangci-lint")
+CONTROLLER_GEN ?= $(shell which controller-gen 2>/dev/null || echo "$$(go env GOPATH)/bin/controller-gen")
+GOLANGCI_LINT  ?= $(shell which golangci-lint 2>/dev/null || echo "$$(go env GOPATH)/bin/golangci-lint")
 
 # CRD output path
 CRD_OUTPUT_DIR ?= config/crd/bases
