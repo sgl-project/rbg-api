@@ -18,7 +18,7 @@ package v1alpha2
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/rbgs/api/apis/workloads/constants"
+	"sigs.k8s.io/rbgs/api/workloads/constants"
 )
 
 // RoleBasedGroupScalingAdapterSpec defines the desired state of RoleBasedGroupScalingAdapter.
@@ -79,6 +79,4 @@ type RoleBasedGroupScalingAdapterList struct {
 	Items           []RoleBasedGroupScalingAdapter `json:"items"`
 }
 
-func init() {
-	SchemeBuilder.Register(&RoleBasedGroupScalingAdapter{}, &RoleBasedGroupScalingAdapterList{})
-}
+

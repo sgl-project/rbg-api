@@ -13,9 +13,6 @@ GOARCH ?= $(shell go env GOARCH)
 CONTROLLER_GEN ?= $(shell which controller-gen 2>/dev/null || echo "$$(go env GOPATH)/bin/controller-gen")
 GOLANGCI_LINT  ?= $(shell which golangci-lint 2>/dev/null || echo "$$(go env GOPATH)/bin/golangci-lint")
 
-# CRD output path
-CRD_OUTPUT_DIR ?= config/crd/bases
-
 ##@ General
 
 .PHONY: help
@@ -25,24 +22,9 @@ help: ## Display this help.
 ##@ Development
 
 .PHONY: generate
-generate: ## Run all code generation (deepcopy + manifests).
-	$(MAKE) generate-deepcopy
-	$(MAKE) generate-manifests
-
-.PHONY: generate-deepcopy
-generate-deepcopy: ## Generate DeepCopy methods for API types.
+generate: ## Generate DeepCopy methods for API types.
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" \
-		paths="./apis/..."
-
-.PHONY: generate-manifests
-generate-manifests: ## Generate CRD manifests.
-	$(CONTROLLER_GEN) crd \
-		paths="./apis/..." \
-		output:crd:artifacts:config=$(CRD_OUTPUT_DIR)
-
-.PHONY: generate-clients
-generate-clients: ## Regenerate client-go, informers, and listers using k8s code-generator.
-	bash hack/update-codegen.sh
+		paths="./workloads/..."
 
 .PHONY: fmt
 fmt: ## Run go fmt against code.
@@ -81,7 +63,3 @@ test: ## Run unit tests.
 .PHONY: install-tools
 install-tools: ## Install required code-generation tools.
 	$(GO) install sigs.k8s.io/controller-tools/cmd/controller-gen@latest
-	$(GO) install k8s.io/code-generator/cmd/client-gen@latest
-	$(GO) install k8s.io/code-generator/cmd/lister-gen@latest
-	$(GO) install k8s.io/code-generator/cmd/informer-gen@latest
-	$(GO) install k8s.io/code-generator/cmd/deepcopy-gen@latest

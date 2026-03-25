@@ -98,6 +98,4 @@ type RoleBasedGroupSetList struct {
 	Items           []RoleBasedGroupSet `json:"items"`
 }
 
-func init() {
-	SchemeBuilder.Register(&RoleBasedGroupSet{}, &RoleBasedGroupSetList{})
-}
+
