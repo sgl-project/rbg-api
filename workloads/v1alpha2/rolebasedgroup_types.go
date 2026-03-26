@@ -289,13 +289,11 @@ type LeaderWorkerPattern struct {
 	WorkerTemplatePatch *runtime.RawExtension `json:"workerTemplatePatch,omitempty"`
 }
 
-// CustomComponentsPattern defines a pattern with fully custom components.
 type CustomComponentsPattern struct {
 	// +optional
 	Components []InstanceComponent `json:"components,omitempty"`
 }
 
-// WorkloadSpec defines the workload type for a role.
 type WorkloadSpec struct {
 	// +optional
 	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/v[0-9]+((alpha|beta)[0-9]+)?$`
@@ -311,7 +309,6 @@ func (w *WorkloadSpec) String() string {
 	return fmt.Sprintf("%s/%s", w.APIVersion, w.Kind)
 }
 
-// EngineRuntime defines an engine runtime to inject into role pods.
 type EngineRuntime struct {
 	// ProfileName specifies the name of the engine runtime profile to be used
 	ProfileName string `json:"profileName"`
@@ -324,7 +321,6 @@ type EngineRuntime struct {
 	Containers []corev1.Container `json:"containers,omitempty"`
 }
 
-// InstanceComponent defines a component within a custom components pattern.
 type InstanceComponent struct {
 	// Name is the type name of the component.
 	Name string `json:"name"`
@@ -341,7 +337,6 @@ type InstanceComponent struct {
 	Template corev1.PodTemplateSpec `json:"template"`
 }
 
-// ScalingAdapter defines scaling adapter configuration for a role.
 type ScalingAdapter struct {
 	// Enable indicates whether the ScalingAdapter is enabled for the Role.
 	// +optional
@@ -395,7 +390,6 @@ type RoleBasedGroup struct {
 	Status RoleBasedGroupStatus `json:"status,omitempty"`
 }
 
-// RoleBasedGroupConditionType defines condition types for RoleBasedGroup.
 type RoleBasedGroupConditionType string
 
 // These are built-in conditions of a RBG.

@@ -52,6 +52,10 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&RoleInstanceList{},
 		&RoleInstanceSet{},
 		&RoleInstanceSetList{},
+		&CoordinatedPolicy{},
+		&CoordinatedPolicyList{},
+		&ClusterEngineRuntimeProfile{},
+		&ClusterEngineRuntimeProfileList{},
 	)
 	metav1.AddToGroupVersion(scheme, GroupVersion)
 	return nil

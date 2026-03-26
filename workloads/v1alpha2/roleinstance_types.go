@@ -1,5 +1,5 @@
 /*
-Copyright 2026 The RBG Authors.
+Copyright 2026.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -44,7 +44,6 @@ type RoleInstanceReadinessGate struct {
 	ConditionType RoleInstanceConditionType `json:"conditionType"`
 }
 
-// RoleInstanceReadyPolicyType defines policy for RoleInstance readiness.
 type RoleInstanceReadyPolicyType string
 
 const (
@@ -55,7 +54,6 @@ const (
 	RoleInstanceReadyPolicyTypeNone RoleInstanceReadyPolicyType = "None"
 )
 
-// RoleInstanceRestartPolicyType defines the restart policy for RoleInstance.
 type RoleInstanceRestartPolicyType string
 
 const (
@@ -63,10 +61,10 @@ const (
 	NoneRoleInstanceRestartPolicy RoleInstanceRestartPolicyType = "None"
 
 	// RoleInstanceRestartPolicyRecreateOnPodRestart will recreate a role instance if its Pod restarted.
+	// It equals to RecreateRoleInstanceOnPodRestart of RBG.
 	RoleInstanceRestartPolicyRecreateOnPodRestart RoleInstanceRestartPolicyType = "RecreateRoleInstanceOnPodRestart"
 )
 
-// RoleInstanceComponent defines a component of a RoleInstance.
 type RoleInstanceComponent struct {
 	// Name is the type name of the component.
 	Name string `json:"name"`
@@ -75,6 +73,10 @@ type RoleInstanceComponent struct {
 	Size *int32 `json:"size,omitempty"`
 
 	// ServiceName is the name of the service that governs this RoleInstance Component.
+	// This service must exist before the RoleInstance, and is responsible for
+	// the network identity of the set. Pods get DNS/hostnames that follow the
+	// pattern: pod-specific-string.serviceName.default.svc.cluster.local
+	// where "pod-specific-string" is managed by the RoleInstance controller.
 	ServiceName string `json:"serviceName,omitempty"`
 
 	// Template is the template for the component pods.
@@ -85,13 +87,14 @@ type RoleInstanceComponent struct {
 
 // RoleInstanceStatus defines the observed state of RoleInstance
 type RoleInstanceStatus struct {
-	// ObservedGeneration is the most recent generation observed for this RoleInstance.
+	// ObservedGeneration is the most recent generation observed for this RoleInstance. It corresponds to the
+	// RoleInstance's generation, which is updated on mutation by the API Server.
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 
 	// Conditions track the condition of the RoleInstance
 	Conditions []RoleInstanceCondition `json:"conditions,omitempty"`
 
-	// ComponentStatuses is a list of RoleInstanceComponentStatus
+	// ComponentStatuses is a list of RoleInstanceComponentStatus, each of which specifies the status of a component.
 	ComponentStatuses []RoleInstanceComponentStatus `json:"componentStatuses,omitempty"`
 
 	// LabelSelector of a RoleInstance is a label query over Pods that should match the RoleInstance.
@@ -103,11 +106,12 @@ type RoleInstanceStatus struct {
 	// UpdateRevision is a hash value that changes when the spec is changed.
 	UpdateRevision string `json:"updateRevision,omitempty"`
 
-	// CollisionCount is the count of hash collisions for the RoleInstanceSet.
+	// CollisionCount is the count of hash collisions for the RoleInstanceSet. The RoleInstanceSet controller
+	// uses this field as a collision avoidance mechanism when it needs to create the name for the
+	// newest ControllerRevision.
 	CollisionCount *int32 `json:"collisionCount,omitempty"`
 }
 
-// RoleInstanceComponentStatus defines the status of a component within a RoleInstance.
 type RoleInstanceComponentStatus struct {
 	// Name is the type name of the component.
 	Name string `json:"name"`
@@ -135,12 +139,25 @@ type RoleInstanceComponentStatus struct {
 type RoleInstanceConditionType string
 
 const (
-	RoleInstanceReady              RoleInstanceConditionType = "RoleInstanceReady"
+	// RoleInstanceReady corresponding condition status was set to "False" by multiple writers,
+	// the condition status will be considered as "True" only when all these writers
+	// set it to "True".
+	RoleInstanceReady RoleInstanceConditionType = "RoleInstanceReady"
+
+	// RoleInstanceInPlaceUpdateReady indicates RoleInstance inplace update
 	RoleInstanceInPlaceUpdateReady RoleInstanceConditionType = "RoleInstanceInPlaceUpdateReady"
-	RoleInstanceCustomReady        RoleInstanceConditionType = "RoleInstanceCustomReady"
-	RoleInstanceAllPodsReady       RoleInstanceConditionType = "RoleInstanceAllPodsReady"
-	RoleInstanceFailedScale        RoleInstanceConditionType = "FailedScale"
-	RoleInstanceFailedUpdate       RoleInstanceConditionType = "FailedUpdate"
+
+	// RoleInstanceCustomReady indicates the expectation of customized ready state.
+	RoleInstanceCustomReady RoleInstanceConditionType = "RoleInstanceCustomReady"
+
+	// RoleInstanceAllPodsReady indicates all pods in the RoleInstance are ready.
+	RoleInstanceAllPodsReady RoleInstanceConditionType = "RoleInstanceAllPodsReady"
+
+	// RoleInstanceFailedScale indicates RoleInstance controller failed to create or delete pods.
+	RoleInstanceFailedScale RoleInstanceConditionType = "FailedScale"
+
+	// RoleInstanceFailedUpdate indicates RoleInstance controller failed to update pods.
+	RoleInstanceFailedUpdate RoleInstanceConditionType = "FailedUpdate"
 )
 
 // RoleInstanceCondition describes the state of a RoleInstance at a certain point.
@@ -168,7 +185,7 @@ type RoleInstanceCondition struct {
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:shortName=rins,path=roleinstances,scope=Namespaced
 // +kubebuilder:printcolumn:name="READY",type="string",JSONPath=".status.conditions[?(@.type=='RoleInstanceReady')].status",description="Overall readiness status"
-// +kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp"
+// +kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp",description="CreationTimestamp is a timestamp representing the server time when this object was created. It is not guaranteed to be set in happens-before order across separate operations. Clients may not set this value. It is represented in RFC3339 form and is in UTC."
 
 // RoleInstance is the Schema for the roleinstances API
 type RoleInstance struct {
@@ -189,7 +206,6 @@ type RoleInstanceList struct {
 	Items           []RoleInstance `json:"items"`
 }
 
-// RoleInstanceTemplate is an embedded template for RoleInstanceSet.
 type RoleInstanceTemplate struct {
 	RoleInstanceSpec `json:",inline"`
 }

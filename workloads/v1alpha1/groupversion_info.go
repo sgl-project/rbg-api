@@ -44,6 +44,16 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(GroupVersion,
 		&RoleBasedGroup{},
 		&RoleBasedGroupList{},
+		&RoleBasedGroupSet{},
+		&RoleBasedGroupSetList{},
+		&RoleBasedGroupScalingAdapter{},
+		&RoleBasedGroupScalingAdapterList{},
+		&Instance{},
+		&InstanceList{},
+		&InstanceSet{},
+		&InstanceSetList{},
+		&ClusterEngineRuntimeProfile{},
+		&ClusterEngineRuntimeProfileList{},
 	)
 	metav1.AddToGroupVersion(scheme, GroupVersion)
 	return nil
@@ -52,9 +62,4 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 // Resource takes an unqualified resource and returns a Group-qualified GroupResource.
 func Resource(resource string) schema.GroupResource {
 	return GroupVersion.WithResource(resource).GroupResource()
-}
-
-// Kind takes an unqualified kind and returns a Group qualified GroupKind.
-func Kind(kind string) schema.GroupKind {
-	return GroupVersion.WithKind(kind).GroupKind()
 }
