@@ -16,11 +16,5 @@ limitations under the License.
 
 package v1alpha2
 
-import (
-	"k8s.io/apimachinery/pkg/runtime/schema"
-)
-
-// Kind takes an unqualified kind and returns a Group qualified GroupKind.
-func Kind(kind string) schema.GroupKind {
-	return GroupVersion.WithKind(kind).GroupKind()
-}
+// Hub marks this type as a conversion hub.
+func (*RoleBasedGroup) Hub() {}

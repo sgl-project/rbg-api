@@ -14,12 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1alpha2
+package v1alpha1
 
-import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/rbgs/api/workloads/constants"
-)
+import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 // RoleBasedGroupScalingAdapterSpec defines the desired state of RoleBasedGroupScalingAdapter.
 type RoleBasedGroupScalingAdapterSpec struct {
@@ -33,7 +30,7 @@ type RoleBasedGroupScalingAdapterSpec struct {
 // RoleBasedGroupScalingAdapterStatus shows the current state of a RoleBasedGroupScalingAdapter.
 type RoleBasedGroupScalingAdapterStatus struct {
 	// Phase indicates the current phase of the RoleBasedGroupScalingAdapter.
-	Phase constants.AdapterPhase `json:"phase,omitempty"`
+	Phase AdapterPhase `json:"phase,omitempty"`
 
 	// Replicas is the current effective number of target RoleBasedGroupRole.
 	Replicas *int32 `json:"replicas,omitempty"`
@@ -54,7 +51,6 @@ type AdapterScaleTargetRef struct {
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:subresource:scale:specpath=.spec.replicas,statuspath=.status.replicas,selectorpath=.status.selector
-// +kubebuilder:storageversion
 // +kubebuilder:resource:shortName={rbgsa}
 // +kubebuilder:printcolumn:name="PHASE",type="string",JSONPath=".status.phase",description="The current phase of the adapter"
 // +kubebuilder:printcolumn:name="REPLICAS",type="integer",JSONPath=".status.replicas",description="The current number of replicas"

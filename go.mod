@@ -1,3 +1,22 @@
+// Module: sigs.k8s.io/rbgs/api
+//
+// This is the API module for RoleBasedGroup (RBG), a Kubernetes operator for managing
+// role-based LLM inference workloads.
+//
+// Repository: https://github.com/sgl-project/rbg-api
+//
+// WARNING: The module path uses the sigs.k8s.io domain (sigs.k8s.io/rbgs/api), but the
+// actual source code is hosted on GitHub at github.com/sgl-project/rbg-api. These two
+// do not match, so direct `go get sigs.k8s.io/rbgs/api` will FAIL.
+//
+// To use this module, you MUST add a replace directive in your go.mod:
+//
+//   require sigs.k8s.io/rbgs/api v0.7.0-alpha.1
+//   replace sigs.k8s.io/rbgs/api => github.com/sgl-project/rbg-api v0.7.0-alpha.1
+//
+// Alternatively, you can import directly from GitHub:
+//   import "github.com/sgl-project/rbg-api/workloads/v1alpha2"
+//   go get github.com/sgl-project/rbg-api@v0.7.0-alpha.1
 module sigs.k8s.io/rbgs/api
 
 go 1.24.1
