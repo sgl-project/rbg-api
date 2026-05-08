@@ -14,26 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1alpha2
+package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
-
-// RoleBasedGroupTemplateSpec describes the data a RoleBasedGroup should have when created from a template.
-type RoleBasedGroupTemplateSpec struct {
-	// Map of string keys and values that can be used to organize and categorize objects.
-	// +optional
-	Labels map[string]string `json:"labels,omitempty"`
-
-	// Annotations is an unstructured key value map stored with a resource.
-	// +optional
-	Annotations map[string]string `json:"annotations,omitempty"`
-
-	// Spec defines the desired behavior of the RoleBasedGroup.
-	// +optional
-	Spec RoleBasedGroupSpec `json:"spec"`
-}
 
 // RoleBasedGroupSetSpec defines the desired state of RoleBasedGroupSet.
 type RoleBasedGroupSetSpec struct {
@@ -41,8 +26,8 @@ type RoleBasedGroupSetSpec struct {
 	// +kubebuilder:default=1
 	Replicas *int32 `json:"replicas,omitempty"`
 
-	// GroupTemplate describes the RoleBasedGroup that will be created.
-	GroupTemplate RoleBasedGroupTemplateSpec `json:"groupTemplate"`
+	// Template describes the RoleBasedGroup that will be created.
+	Template RoleBasedGroupSpec `json:"template"`
 }
 
 type RoleBasedGroupSetConditionType string
@@ -73,7 +58,6 @@ type RoleBasedGroupSetStatus struct {
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:subresource:scale:specpath=.spec.replicas,statuspath=.status.replicas
-// +kubebuilder:storageversion
 // +kubebuilder:printcolumn:name="DESIRED",type="string",JSONPath=".status.replicas",description="desired replicas"
 // +kubebuilder:printcolumn:name="READY",type="string",JSONPath=".status.readyReplicas",description="ready replicas"
 // +kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp"
