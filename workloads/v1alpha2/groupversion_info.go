@@ -56,6 +56,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&CoordinatedPolicyList{},
 		&ClusterEngineRuntimeProfile{},
 		&ClusterEngineRuntimeProfileList{},
+		&RoleBasedGroupWarmup{},
+		&RoleBasedGroupWarmupList{},
 	)
 	metav1.AddToGroupVersion(scheme, GroupVersion)
 	return nil

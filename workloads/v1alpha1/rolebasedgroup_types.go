@@ -329,7 +329,7 @@ type RoleSpec struct {
 
 	// RestartPolicy defines the restart policy when pod failures happen.
 	// The default value is RecreateRoleInstanceOnPodRestart for LWS and None for STS & Deploy. Therefore, no default value is set.
-	// +kubebuilder:validation:Enum={None,RecreateRBGOnPodRestart,RecreateRoleInstanceOnPodRestart}
+	// +kubebuilder:validation:Enum={None,RecreateRoleInstanceOnPodRestart}
 	// +optional
 	RestartPolicy RestartPolicyType `json:"restartPolicy,omitempty"`
 
@@ -444,6 +444,8 @@ type RoleBasedGroupStatus struct {
 	// Conditions track the condition of the RBG
 	// +patchMergeKey=type
 	// +patchStrategy=merge
+	// +listType=map
+	// +listMapKey=type
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 
 	// Status of individual roles
@@ -471,6 +473,7 @@ type RoleStatus struct {
 // +kubebuilder:printcolumn:name="READY",type="string",JSONPath=".status.conditions[?(@.type=='Ready')].status"
 // +kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp"
 // +kubebuilder:resource:shortName={rbg}
+// +kubebuilder:deprecatedversion:warning="workloads.x-k8s.io/v1alpha1 RoleBasedGroup is deprecated; use workloads.x-k8s.io/v1alpha2 RoleBasedGroup"
 
 // RoleBasedGroup is the Schema for the rolebasedgroups API.
 type RoleBasedGroup struct {
@@ -500,10 +503,6 @@ const (
 	// is true when the rbg is in upgrade process after the (leader/worker) template is updated. If only replicas is modified, it will
 	// not be considered as UpdateInProgress.
 	RoleBasedGroupRollingUpdateInProgress RoleBasedGroupConditionType = "RollingUpdateInProgress"
-
-	// RoleBasedGroupRestartInProgress means rbg is restarting. RestartInProgress
-	// is true when the rbg is in restart process after the pod is deleted or the container is restarted.
-	RoleBasedGroupRestartInProgress RoleBasedGroupConditionType = "RestartInProgress"
 )
 
 // +kubebuilder:object:root=true

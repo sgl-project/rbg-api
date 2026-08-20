@@ -155,15 +155,71 @@ const (
 	// RestartPolicyNone - No restart policy.
 	RestartPolicyNone RestartPolicyType = "None"
 
-	// RecreateRBGOnPodRestart - Recreate the entire RBG on pod restart.
-	RecreateRBGOnPodRestart RestartPolicyType = "RecreateRBGOnPodRestart"
-
 	// RecreateRoleInstanceOnPodRestart - Recreate the role instance on pod restart.
 	RecreateRoleInstanceOnPodRestart RestartPolicyType = "RecreateRoleInstanceOnPodRestart"
 )
 
+// RestartPolicyConfig groups restart policy type and backoff configuration.
+// +kubebuilder:validation:XValidation:rule="!has(self.baseDelaySeconds) || !has(self.maxDelaySeconds) || self.maxDelaySeconds >= self.baseDelaySeconds",message="maxDelaySeconds must be greater than or equal to baseDelaySeconds"
+type RestartPolicyConfig struct {
+	// Type defines the restart policy when pod failures happen.
+	// Default is RecreateRoleInstanceOnPodRestart.
+	// +kubebuilder:validation:Enum={None,RecreateRoleInstanceOnPodRestart}
+	// +optional
+	Type RestartPolicyType `json:"type,omitempty"`
+
+	// BaseDelaySeconds is the base delay between restart attempts (seconds).
+	// Subsequent attempts use exponential backoff: delay = min(base * 2^(restartCount-1), maxDelaySeconds).
+	// The first recreation after a crash is immediate (no backoff) because LastRestartTime is nil.
+	// The first backoff (second recreation) equals baseDelaySeconds, then doubles each round.
+	// Default is 30.
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:default=30
+	BaseDelaySeconds *int32 `json:"baseDelaySeconds,omitempty"`
+
+	// MaxDelaySeconds caps the exponential backoff delay (seconds).
+	// Default is 600.
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:default=600
+	MaxDelaySeconds *int32 `json:"maxDelaySeconds,omitempty"`
+}
+
+// resolveRestartPolicyConfig folds the deprecated restartPolicy string into cfg.
+// The resolved type is taken from cfg.Type, then legacy, then defaultType.
+func resolveRestartPolicyConfig(cfg *RestartPolicyConfig, legacy, defaultType RestartPolicyType) RestartPolicyConfig {
+	var resolved RestartPolicyConfig
+	if cfg != nil {
+		resolved = *cfg
+	}
+	if resolved.Type != "" {
+		return resolved
+	}
+	if legacy != "" {
+		resolved.Type = legacy
+		return resolved
+	}
+	resolved.Type = defaultType
+	return resolved
+}
+
+// SharedServiceSelectionPolicy defines the service policy of service per role
+type SharedServiceSelectionPolicy string
+
+const (
+	// SharedServiceSelectionAll - All pods would be routed to, and every component of the role
+	// instance gets a serviceName, so each pod is addressable at <pod-name>.<service-name>
+	SharedServiceSelectionAll SharedServiceSelectionPolicy = "All"
+
+	// SharedServiceSelectionLeaderOnly - The headless service would only target at the leaders,
+	// and only the leader component gets a serviceName
+	SharedServiceSelectionLeaderOnly SharedServiceSelectionPolicy = "LeaderOnly"
+)
+
 // RoleSpec defines the specification for a role in the group
 // +kubebuilder:validation:XValidation:rule="!(has(self.standalonePattern) && has(self.leaderWorkerPattern))",message="standalonePattern and leaderWorkerPattern are mutually exclusive"
+// +kubebuilder:validation:XValidation:rule="!has(self.leaderWorkerPattern) || !has(self.leaderWorkerPattern.sharedServiceSelection) || self.leaderWorkerPattern.sharedServiceSelection != 'LeaderOnly' || !has(self.annotations) || !('rbg.workloads.x-k8s.io/role-workload-type' in self.annotations) || self.annotations['rbg.workloads.x-k8s.io/role-workload-type'] == 'workloads.x-k8s.io/v1alpha2/RoleInstanceSet'",message="leaderWorkerPattern.sharedServiceSelection=LeaderOnly is only supported for RoleInstanceSet + leaderWorkerPattern"
 type RoleSpec struct {
 	// Unique identifier for the role
 	// +kubebuilder:validation:Required
@@ -185,11 +241,6 @@ type RoleSpec struct {
 	// RolloutStrategy defines the strategy that will be applied to update replicas.
 	// +optional
 	RolloutStrategy *RolloutStrategy `json:"rolloutStrategy,omitempty"`
-
-	// RestartPolicy defines the restart policy when pod failures happen.
-	// +kubebuilder:validation:Enum={None,RecreateRBGOnPodRestart,RecreateRoleInstanceOnPodRestart}
-	// +optional
-	RestartPolicy RestartPolicyType `json:"restartPolicy,omitempty"`
 
 	// Dependencies of the role
 	// +optional
@@ -323,11 +374,49 @@ type LeaderWorkerPattern struct {
 	// +kubebuilder:pruning:PreserveUnknownFields
 	// +kubebuilder:validation:Schemaless
 	WorkerTemplatePatch *runtime.RawExtension `json:"workerTemplatePatch,omitempty"`
+
+	// SharedServiceSelection indicates the service policy of the role. When unset, a RoleInstanceSet
+	// role resolves to LeaderOnly and any other workload type resolves to All. Switching the policy
+	// changes pod hostname/subdomain, which are immutable fields, so it triggers a rolling
+	// replacement of the role instances.
+	//
+	// The default is applied by the controller rather than by a CRD default: CRD defaulting runs
+	// before validation, so a stored LeaderOnly would be rejected by the RoleSpec validation rule on
+	// every role that uses another workload type. See RoleSpec GetSharedServiceSelection.
+	// +optional
+	// +kubebuilder:validation:Enum=All;LeaderOnly
+	SharedServiceSelection *SharedServiceSelectionPolicy `json:"sharedServiceSelection,omitempty"`
+
+	// RestartPolicy defines the restart policy when pod failures happen.
+	//
+	// Deprecated: use RestartPolicyConfig instead. Kept as a string for wire
+	// compatibility with v0.7.0, where this field carried the policy directly.
+	// +optional
+	// +kubebuilder:validation:Enum={None,RecreateRoleInstanceOnPodRestart}
+	RestartPolicy RestartPolicyType `json:"restartPolicy,omitempty"`
+
+	// RestartPolicyConfig defines the restart policy and backoff configuration.
+	// Its type takes precedence over the deprecated RestartPolicy field.
+	// +optional
+	RestartPolicyConfig *RestartPolicyConfig `json:"restartPolicyConfig,omitempty"`
 }
 
 type CustomComponentsPattern struct {
 	// +optional
 	Components []InstanceComponent `json:"components,omitempty"`
+
+	// RestartPolicy defines the restart policy when pod failures happen.
+	//
+	// Deprecated: use RestartPolicyConfig instead. Kept as a string for wire
+	// compatibility with v0.7.0, where this field carried the policy directly.
+	// +optional
+	// +kubebuilder:validation:Enum={None,RecreateRoleInstanceOnPodRestart}
+	RestartPolicy RestartPolicyType `json:"restartPolicy,omitempty"`
+
+	// RestartPolicyConfig defines the restart policy and backoff configuration.
+	// Its type takes precedence over the deprecated RestartPolicy field.
+	// +optional
+	RestartPolicyConfig *RestartPolicyConfig `json:"restartPolicyConfig,omitempty"`
 }
 
 type WorkloadSpec struct {
@@ -367,6 +456,21 @@ type InstanceComponent struct {
 	// ServiceName is the name of the service that governs this Instance Component.
 	ServiceName string `json:"serviceName,omitempty"`
 
+	// Labels are additional labels merged into every pod of this component at creation time.
+	// They are merged with (and take precedence over) any labels already present in
+	// Template.Metadata.Labels.  Controller-directive labels can be placed here to keep
+	// the template.spec clean.
+	// +optional
+	Labels map[string]string `json:"labels,omitempty"`
+
+	// Annotations are additional annotations merged into every pod of this component at
+	// creation time.  They are merged with (and take precedence over) any annotations
+	// already present in Template.Metadata.Annotations.
+	// Controller-directive annotations such as component-depends-on, port-allocator, and
+	// component-discovery should be placed here rather than inside template.metadata.annotations.
+	// +optional
+	Annotations map[string]string `json:"annotations,omitempty"`
+
 	// Template is the template for the component pods.
 	// +kubebuilder:pruning:PreserveUnknownFields
 	// +kubebuilder:validation:Schemaless
@@ -394,6 +498,8 @@ type RoleBasedGroupStatus struct {
 	// Conditions track the condition of the RBG
 	// +patchMergeKey=type
 	// +patchStrategy=merge
+	// +listType=map
+	// +listMapKey=type
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 
 	// Status of individual roles
@@ -444,9 +550,6 @@ const (
 
 	// RoleBasedGroupRollingUpdateInProgress means rbg is performing a rolling update.
 	RoleBasedGroupRollingUpdateInProgress RoleBasedGroupConditionType = "RollingUpdateInProgress"
-
-	// RoleBasedGroupRestartInProgress means rbg is restarting.
-	RoleBasedGroupRestartInProgress RoleBasedGroupConditionType = "RestartInProgress"
 )
 
 // +kubebuilder:object:root=true

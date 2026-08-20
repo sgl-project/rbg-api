@@ -132,7 +132,97 @@ const (
 	// InPlaceUpdateGraceKey identifies the in-place update grace period configuration
 	InPlaceUpdateGraceKey = RBGPrefix + "inplace-update-grace"
 
+	// RoleInplaceUpdateGracePeriodSecondsKey propagates the in-place update grace
+	// period (seconds) from RoleInstanceSet to RoleInstance, so the RoleInstance
+	// controller can honor the configured delay.
+	// Example: rbg.workloads.x-k8s.io/inplace-update-grace-period-seconds: "30"
+	RoleInplaceUpdateGracePeriodSecondsKey = RBGPrefix + "inplace-update-grace-period-seconds"
+
 	// RuntimeContainerMetaKey is a key in pod annotations. Some inplace update scene should report the
 	// states of runtime containers into its value, which is a structure JSON of RuntimeContainerMetaSet type.
 	RuntimeContainerMetaKey = "workloads.x-k8s.io/runtime-containers-meta"
+)
+
+// Component level annotations
+const (
+	// RestartTriggerPolicyAnnotationKey specifies whether a component's
+	// pod restart/failure events should trigger the role's restart policy
+	// (RecreateRoleInstanceOnPodRestart).
+	// Valid values are:
+	//   - "Inherit" (or empty): Pod events from this component will follow the role's restart policy.
+	//   - "Ignore": Pod events from this component will NOT trigger restart policy.
+	// This is useful for auxiliary components (e.g., monitoring, logging sidecars) whose
+	// failures should not affect the main workload.
+	// Example: rbg.workloads.x-k8s.io/restart-trigger-policy: "Ignore"
+	RestartTriggerPolicyAnnotationKey = RBGPrefix + "restart-trigger-policy"
+)
+
+// Restart trigger policy values
+const (
+	// RestartTriggerPolicyInherit means the component's pod events will
+	// follow the role's restart policy configuration. This is the default behavior
+	// when the annotation is not set or set to an unrecognized value.
+	RestartTriggerPolicyInherit = "Inherit"
+
+	// RestartTriggerPolicyIgnore means the component's pod events will
+	// NOT trigger the role's restart policy. Use this for auxiliary components
+	// whose failures should not cascade to the main workload.
+	RestartTriggerPolicyIgnore = "Ignore"
+)
+
+// Inplace scheduling annotations and values.
+const (
+	// RoleInplaceSchedulingAnnotationKey enables in-place scheduling for a role.
+	// When set, recreated Pods (due to rolling upgrade or failure recovery) are
+	// injected with nodeAffinity to prefer or require scheduling to nodes where
+	// the same component type has previously run, enabling reuse of node-local
+	// cached resources.
+	// Valid values:
+	//   - "Preferred": inject preferredDuringSchedulingIgnoredDuringExecution with weight 100.
+	//   - "Required": inject requiredDuringSchedulingIgnoredDuringExecution.
+	// When not set, no in-place scheduling affinity is injected.
+	//
+	// Note: when adding to an existing RBG, old RoleInstances lack the label so
+	// they are unaffected. New RoleInstances start recording bindings,
+	// but no affinity is injected on the first recreation (empty binding).
+	// Affinity takes effect on subsequent recreations.
+	//
+	// Example: rbg.workloads.x-k8s.io/role-inplace-scheduling: "Preferred"
+	RoleInplaceSchedulingAnnotationKey = RBGPrefix + "role-inplace-scheduling"
+
+	// InplaceSchedulingPreferred injects preferredDuringSchedulingIgnoredDuringExecution
+	// nodeAffinity with weight 100, steering recreated Pods toward historical nodes
+	// while allowing fallback to any available node.
+	InplaceSchedulingPreferred = "Preferred"
+
+	// InplaceSchedulingRequired injects requiredDuringSchedulingIgnoredDuringExecution
+	// nodeAffinity, requiring recreated Pods to land on a historical node.
+	// If a binding exists but no historical node is healthy, the Pod remains Pending.
+	// On cold start (empty binding store, e.g. after controller restart), no
+	// affinity is injected until RecordNodeBindings reseeds the store.
+	InplaceSchedulingRequired = "Required"
+
+	// RoleInplaceSchedulingGranularityAnnotationKey controls the binding granularity
+	// for in-place scheduling. When not set, the default is auto-detected:
+	//   - Stateful mode → Pod
+	//   - Stateless mode → Component
+	// Example: rbg.workloads.x-k8s.io/role-inplace-scheduling-granularity: "Component"
+	RoleInplaceSchedulingGranularityAnnotationKey = RBGPrefix + "role-inplace-scheduling-granularity"
+
+	// InplaceSchedulingGranularityPod uses per-Pod binding: each Pod returns to
+	// its own historical node. Key: {rbgUID}/{podName} → single node.
+	InplaceSchedulingGranularityPod = "Pod"
+
+	// InplaceSchedulingGranularityComponent uses component-level binding: Pod
+	// prefers any node that has hosted the same component type.
+	// Key: {rbgUID}/{roleName}-{componentName} → node set.
+	InplaceSchedulingGranularityComponent = "Component"
+
+	// RoleInplaceSchedulingAvoidAnnotationKey specifies one or more node label
+	// keys. When set, a RequiredDuringSchedulingIgnoredDuringExecution term
+	// with DoesNotExist operator is injected for each key, hard-excluding nodes
+	// that carry any of these labels.
+	// The annotation value is a single label key or a comma-separated list.
+	// Example: rbg.workloads.x-k8s.io/role-inplace-scheduling-avoid: "key1,key2"
+	RoleInplaceSchedulingAvoidAnnotationKey = RBGPrefix + "role-inplace-scheduling-avoid"
 )
