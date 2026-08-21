@@ -51,7 +51,11 @@ require (
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
 
-// Use local path so examples always build against the current API source.
-// For published releases, replace ".." with the appropriate version tag, e.g.:
-//   replace sigs.k8s.io/rbgs/api => github.com/sgl-project/rbg-api v0.8.0-alpha.5
-replace sigs.k8s.io/rbgs/api => ../
+// The replace directive maps the module path sigs.k8s.io/rbgs/api to the actual GitHub repository.
+// This is REQUIRED because:
+//   1. The module declares its path as sigs.k8s.io/rbgs/api (in its go.mod)
+//   2. But it is hosted at github.com/sgl-project/rbg-api
+//   3. These two do not match, so direct `go get sigs.k8s.io/rbgs/api` will FAIL
+// Without this replace directive, Go would look for the module at github.com/kubernetes-sigs/rbgs
+// which does not exist.
+replace sigs.k8s.io/rbgs/api => github.com/sgl-project/rbg-api v0.8.0-alpha.5
