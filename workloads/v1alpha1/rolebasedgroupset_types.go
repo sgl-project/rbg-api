@@ -51,6 +51,8 @@ type RoleBasedGroupSetStatus struct {
 	// Conditions track the condition of the rbgs
 	// +patchMergeKey=type
 	// +patchStrategy=merge
+	// +listType=map
+	// +listMapKey=type
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 }
 
@@ -62,6 +64,7 @@ type RoleBasedGroupSetStatus struct {
 // +kubebuilder:printcolumn:name="READY",type="string",JSONPath=".status.readyReplicas",description="ready replicas"
 // +kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp"
 // +kubebuilder:resource:shortName={rbgs}
+// +kubebuilder:deprecatedversion:warning="workloads.x-k8s.io/v1alpha1 RoleBasedGroupSet is deprecated; use workloads.x-k8s.io/v1alpha2 RoleBasedGroupSet"
 
 // RoleBasedGroupSet is the Schema for the rolebasedgroupsets API.
 type RoleBasedGroupSet struct {

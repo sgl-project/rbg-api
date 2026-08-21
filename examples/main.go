@@ -229,12 +229,7 @@ func createRBG(ctx context.Context, rbgClient dynamic.ResourceInterface) error {
 							MaxUnavailable: &maxUnavailable,
 						},
 					},
-					RestartPolicy:       v1alpha2.RestartPolicyNone,
 					PodManagementPolicy: constants.ParallelPodManagement,
-					Workload: v1alpha2.WorkloadSpec{
-						APIVersion: "workloads.x-k8s.io/v1alpha2",
-						Kind:       "RoleInstanceSet",
-					},
 					Pattern: v1alpha2.Pattern{
 						StandalonePattern: &v1alpha2.StandalonePattern{
 							TemplateSource: v1alpha2.TemplateSource{
@@ -380,9 +375,6 @@ func printRBG(rbg *v1alpha2.RoleBasedGroup) {
 		fmt.Printf("    Name:     %s\n", role.Name)
 		if role.Replicas != nil {
 			fmt.Printf("    Replicas: %d\n", *role.Replicas)
-		}
-		if role.RestartPolicy != "" {
-			fmt.Printf("    RestartPolicy: %s\n", role.RestartPolicy)
 		}
 		if role.PodManagementPolicy != "" {
 			fmt.Printf("    PodManagementPolicy: %s\n", role.PodManagementPolicy)

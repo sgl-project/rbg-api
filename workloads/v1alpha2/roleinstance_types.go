@@ -32,7 +32,18 @@ type RoleInstanceSpec struct {
 	ReadyPolicy RoleInstanceReadyPolicyType `json:"readyPolicy,omitempty"`
 
 	// RestartPolicy defines the restart policy for all pods within the RoleInstance.
-	RestartPolicy RoleInstanceRestartPolicyType `json:"restartPolicy,omitempty"`
+	//
+	// Deprecated: use RestartPolicyConfig instead. Kept as a string for wire
+	// compatibility with v0.7.0, where this field carried the policy directly.
+	// +optional
+	// +kubebuilder:validation:Enum={None,RecreateRoleInstanceOnPodRestart}
+	RestartPolicy RestartPolicyType `json:"restartPolicy,omitempty"`
+
+	// RestartPolicyConfig defines the restart policy and backoff configuration for
+	// all pods within the RoleInstance. Its type takes precedence over the
+	// deprecated RestartPolicy field.
+	// +optional
+	RestartPolicyConfig *RestartPolicyConfig `json:"restartPolicyConfig,omitempty"`
 
 	// ReadinessGates is an optional list of PodReadinessGates for the whole RoleInstance.
 	ReadinessGates []RoleInstanceReadinessGate `json:"readinessGates,omitempty"`
@@ -44,6 +55,51 @@ type RoleInstanceReadinessGate struct {
 	ConditionType RoleInstanceConditionType `json:"conditionType"`
 }
 
+// Default values for restart policy delay configuration.
+const (
+	DefaultBaseDelaySeconds int32 = 30
+	DefaultMaxDelaySeconds  int32 = 600
+)
+
+// GetRestartPolicyConfig returns the restart policy configuration, folding the
+// deprecated RestartPolicy string in when RestartPolicyConfig carries no type.
+// No default type is applied: an empty type means no instance-level restart, and
+// synthesizing RecreateRoleInstanceOnPodRestart here would start recreating the
+// RoleInstances of patterns that never opted in.
+func (s *RoleInstanceSpec) GetRestartPolicyConfig() RestartPolicyConfig {
+	if s == nil {
+		return RestartPolicyConfig{}
+	}
+	return resolveRestartPolicyConfig(s.RestartPolicyConfig, s.RestartPolicy, "")
+}
+
+// GetRestartPolicy returns the effective restart policy type.
+func (s *RoleInstanceSpec) GetRestartPolicy() RestartPolicyType {
+	return s.GetRestartPolicyConfig().Type
+}
+
+// GetBaseDelaySeconds returns the configured base delay or the default (30).
+func (s *RoleInstanceSpec) GetBaseDelaySeconds() int32 {
+	if s == nil {
+		return DefaultBaseDelaySeconds
+	}
+	if cfg := s.GetRestartPolicyConfig(); cfg.BaseDelaySeconds != nil {
+		return *cfg.BaseDelaySeconds
+	}
+	return DefaultBaseDelaySeconds
+}
+
+// GetMaxDelaySeconds returns the configured max delay or the default (600).
+func (s *RoleInstanceSpec) GetMaxDelaySeconds() int32 {
+	if s == nil {
+		return DefaultMaxDelaySeconds
+	}
+	if cfg := s.GetRestartPolicyConfig(); cfg.MaxDelaySeconds != nil {
+		return *cfg.MaxDelaySeconds
+	}
+	return DefaultMaxDelaySeconds
+}
+
 type RoleInstanceReadyPolicyType string
 
 const (
@@ -52,17 +108,6 @@ const (
 
 	// RoleInstanceReadyPolicyTypeNone means do nothing for Pods
 	RoleInstanceReadyPolicyTypeNone RoleInstanceReadyPolicyType = "None"
-)
-
-type RoleInstanceRestartPolicyType string
-
-const (
-	// NoneRoleInstanceRestartPolicy will follow the same behavior as the Pod.
-	NoneRoleInstanceRestartPolicy RoleInstanceRestartPolicyType = "None"
-
-	// RoleInstanceRestartPolicyRecreateOnPodRestart will recreate a role instance if its Pod restarted.
-	// It equals to RecreateRoleInstanceOnPodRestart of RBG.
-	RoleInstanceRestartPolicyRecreateOnPodRestart RoleInstanceRestartPolicyType = "RecreateRoleInstanceOnPodRestart"
 )
 
 type RoleInstanceComponent struct {
@@ -78,6 +123,21 @@ type RoleInstanceComponent struct {
 	// pattern: pod-specific-string.serviceName.default.svc.cluster.local
 	// where "pod-specific-string" is managed by the RoleInstance controller.
 	ServiceName string `json:"serviceName,omitempty"`
+
+	// Labels are additional labels merged into every pod of this component at creation time.
+	// These are copied from InstanceComponent.Labels during reconciliation and are merged
+	// with (and take precedence over) any labels already present in Template.Metadata.Labels.
+	// +optional
+	Labels map[string]string `json:"labels,omitempty"`
+
+	// Annotations are additional annotations merged into every pod of this component at
+	// creation time.  These are copied from InstanceComponent.Annotations during reconciliation
+	// and are merged with (and take precedence over) any annotations already present in
+	// Template.Metadata.Annotations.
+	// Controller-directive annotations (component-depends-on, port-allocator,
+	// component-discovery) live here.
+	// +optional
+	Annotations map[string]string `json:"annotations,omitempty"`
 
 	// Template is the template for the component pods.
 	// +kubebuilder:pruning:PreserveUnknownFields
@@ -110,6 +170,37 @@ type RoleInstanceStatus struct {
 	// uses this field as a collision avoidance mechanism when it needs to create the name for the
 	// newest ControllerRevision.
 	CollisionCount *int32 `json:"collisionCount,omitempty"`
+
+	// InPlaceUpdateContainerBaselines records the pre-update baseline for
+	// containers that were in-place updated. Outer key is pod name, inner key
+	// is container name.
+	// Set by the Update flow when an in-place update is performed.
+	// Baselines for deleted pods are garbage-collected when all replicas converge.
+	// Baselines for existing pods are retained and naturally overwritten on next update.
+	// Used by shouldRecreateInstance to distinguish expected container restarts
+	// (from in-place image changes) from real crashes.
+	// +optional
+	InPlaceUpdateContainerBaselines map[string]map[string]ContainerUpdateBaseline `json:"inPlaceUpdateContainerBaselines,omitempty"`
+
+	// RestartCount tracks the number of times the restart policy has triggered
+	// a full RoleInstance recreation.
+	// +optional
+	RestartCount int32 `json:"restartCount,omitempty"`
+
+	// LastRestartTime is the timestamp of the most recent restart-policy-triggered
+	// recreation. Used to compute exponential backoff between restart attempts.
+	// +optional
+	LastRestartTime *metav1.Time `json:"lastRestartTime,omitempty"`
+}
+
+// ContainerUpdateBaseline records the pre-update state of a container for
+// distinguishing expected restarts (from in-place image changes) from real crashes.
+type ContainerUpdateBaseline struct {
+	// RestartCount is the container's RestartCount before the in-place update.
+	RestartCount int32 `json:"restartCount"`
+	// ImageID is the container's ImageID before the in-place update.
+	// Used to determine if the image actually changed for this container.
+	ImageID string `json:"imageID,omitempty"`
 }
 
 type RoleInstanceComponentStatus struct {
@@ -158,6 +249,11 @@ const (
 
 	// RoleInstanceFailedUpdate indicates RoleInstance controller failed to update pods.
 	RoleInstanceFailedUpdate RoleInstanceConditionType = "FailedUpdate"
+
+	// RoleInstanceRestarting indicates the instance is being recreated due to restart policy.
+	// While this condition is True, further restart-policy recreations are suppressed to
+	// prevent cascading restart loops.
+	RoleInstanceRestarting RoleInstanceConditionType = "Restarting"
 )
 
 // RoleInstanceCondition describes the state of a RoleInstance at a certain point.
