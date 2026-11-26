@@ -25,6 +25,8 @@ const (
 
 	// GroupSetIndexLabelKey identifies the index of the RBG within the RBGSet
 	GroupSetIndexLabelKey = RBGPrefix + "groupset-index"
+
+	GroupSetRevisionLabelKey = RBGPrefix + "groupset-revision"
 )
 
 // Group level labels
@@ -32,9 +34,8 @@ const (
 	// GroupNameLabelKey identifies resources belonging to a specific RoleBasedGroup
 	GroupNameLabelKey = RBGPrefix + "group-name"
 
-	// GroupUIDLabelKey is set on every Pod and carries a short hash
-	// that identifies all Pods belonging to the same RoleBasedGroup instance.
-	// Used as the match label for topology affinity.
+	// GroupUIDLabelKey identifies an RBG by a hash of its namespace and name.
+	// It is used as the match label for topology affinity.
 	GroupUIDLabelKey = RBGPrefix + "group-uid"
 
 	// RBGOwnerUIDLabelKey carries the real Kubernetes UID of the owning
@@ -48,7 +49,7 @@ const (
 	// RoleBasedGroup Roles's template.
 	GroupRevisionLabelKey = RBGPrefix + "group-revision"
 
-	// GroupUniqueHashLabelKey is used for pod affinity rules in exclusive topology
+	// GroupUniqueHashLabelKey is the legacy exclusive-topology selector key.
 	GroupUniqueHashLabelKey = RBGPrefix + "group-unique-hash"
 )
 
