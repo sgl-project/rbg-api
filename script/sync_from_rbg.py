@@ -39,6 +39,7 @@ API_EXCLUDED_FILE_NAMES = {
     "helper.go",
     "register.go",
     "excluded_ordinals.go",
+    "clusterengineruntimeprofile_references.go",
 }
 API_EXCLUDED_FILE_SUFFIXES = (
     "_test.go",
